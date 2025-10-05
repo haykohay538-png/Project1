@@ -1,0 +1,8 @@
+ls
+cd /home
+mkdir /home/user
+touch /home/user/file1.txt
+ls /home/user
+cat /home/user/file1.txt
+date
+exit

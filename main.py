@@ -2,6 +2,7 @@ import os
 import shlex
 import tkinter as tk
 from tkinter import scrolledtext
+import sys
 
 VFS_NAME = "VFS"
 
@@ -67,6 +68,15 @@ class ShellApp:
 def main():
     root = tk.Tk()
     app = ShellApp(root)
+
+    if len(sys.argv) > 1 and os.path.exists(sys.argv[1]):
+        with open(sys.argv[1]) as f:
+            for line in f:
+                line = line.strip()
+                if line:
+                    app.input_var.set(line)
+                    app.on_enter(None)
+
     root.mainloop()
 
 if __name__ == "__main__":
