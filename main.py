@@ -8,7 +8,7 @@ VFS_NAME = "VFS"
 
 class VFS:
     def __init__(self):
-        self.fs = {'/': {}}  # корень
+        self.fs = {'/': {}}
         self.current_path = '/'
 
     def _resolve(self, path):
@@ -79,6 +79,17 @@ class ShellApp:
         root.title(f"{VFS_NAME} - Shell")
         self.current_dir = "/"
         self.build_ui()
+
+    def __init__(self):
+        self.staged_files = []
+        self.commits = []
+
+    def add(self, filename):
+        if os.path.exists(filename):
+            self.staged_files.append(filename)
+            print(f"Файл {filename} добавлен в stage.")
+        else:
+            print("Ошибка: файл не найден.")
 
     def build_ui(self):
         self.output = scrolledtext.ScrolledText(self.root, wrap=tk.WORD, height=20, width=80)
