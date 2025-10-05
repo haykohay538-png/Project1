@@ -6,6 +6,73 @@ import sys
 
 VFS_NAME = "VFS"
 
+class VFS:
+    def __init__(self):
+        self.fs = {'/': {}}  # корень
+        self.current_path = '/'
+
+    def _resolve(self, path):
+        if not path.startswith('/'):
+            path = self.current_path.rstrip('/') + '/' + path
+        parts = [p for p in path.split('/') if p]
+        node = self.fs['/']
+        for p in parts:
+            if p in node and isinstance(node[p], dict):
+                node = node[p]
+            else:
+                return None
+        return node
+
+    def ls(self, path=None):
+        path = path or self.current_path
+        node = self._resolve(path)
+        if node is None:
+            return f"No such directory: {path}"
+        return '  '.join(node.keys()) if node else "(empty)"
+
+    def cd(self, path):
+        node = self._resolve(path)
+        if node is None:
+            return f"No such directory: {path}"
+        self.current_path = path if path.startswith('/') else self.current_path.rstrip('/') + '/' + path
+        return None
+
+    def mkdir(self, path):
+        if path.startswith('/'):
+            parts = [p for p in path.split('/') if p]
+            node = self.fs['/']
+        else:
+            parts = [p for p in path.split('/') if p]
+            node = self._resolve(self.current_path)
+        if node is None:
+            return f"Cannot create directory: {path}"
+        for p in parts:
+            if p not in node:
+                node[p] = {}
+            node = node[p]
+        return None
+
+    def touch(self, path):
+        if path.startswith('/'):
+            parts = [p for p in path.split('/') if p]
+            node = self.fs['/']
+        else:
+            parts = [p for p in path.split('/') if p]
+            node = self._resolve(self.current_path)
+        if node is None:
+            return f"Cannot create file: {path}"
+        for p in parts[:-1]:
+            node = node.get(p, {})
+        node[parts[-1]] = ""
+        return None
+
+    def cat(self, path):
+        node = self._resolve('/'.join(path.split('/')[:-1]) or self.current_path)
+        if node is None or path.split('/')[-1] not in node:
+            return f"No such file: {path}"
+        content = node[path.split('/')[-1]]
+        return content if isinstance(content, str) else "(directory)"
+
 class ShellApp:
     def __init__(self, root):
         self.root = root
