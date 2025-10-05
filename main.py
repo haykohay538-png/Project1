@@ -1,0 +1,73 @@
+import os
+import shlex
+import tkinter as tk
+from tkinter import scrolledtext
+
+VFS_NAME = "VFS"
+
+class ShellApp:
+    def __init__(self, root):
+        self.root = root
+        root.title(f"{VFS_NAME} - Shell")
+        self.current_dir = "/"
+        self.build_ui()
+
+    def build_ui(self):
+        self.output = scrolledtext.ScrolledText(self.root, wrap=tk.WORD, height=20, width=80)
+        self.output.pack(padx=8, pady=8)
+        self.input_var = tk.StringVar()
+        self.input_entry = tk.Entry(self.root, textvariable=self.input_var)
+        self.input_entry.bind("<Return>", self.on_enter)
+        self.input_entry.pack(fill=tk.X, padx=8, pady=(0,8))
+        self.input_entry.focus()
+        self.print_intro()
+
+    def print_intro(self):
+        self.write("Welcome to the VFS Shell prototype.\n")
+        self.write("Supported commands: ls, cd, exit\n")
+        self.write("Environment variables expand, e.g. $HOME -> " + os.path.expandvars("$HOME") + "\n")
+        self.prompt()
+
+    def prompt(self):
+        self.write(f"{self.current_dir}$ ")
+
+    def write(self, text):
+        self.output.insert(tk.END, text)
+        self.output.see(tk.END)
+
+    def on_enter(self, event):
+        raw = self.input_var.get()
+        self.input_var.set("")
+        self.write(raw + "\n")
+        try:
+            expanded = os.path.expandvars(raw)
+            parts = shlex.split(expanded) if expanded.strip() else []
+        except Exception as e:
+            self.write(f"Parse error: {e}\n")
+            self.prompt()
+            return
+        if not parts:
+            self.prompt()
+            return
+        cmd, *args = parts
+        if cmd == "exit":
+            self.write("Exiting...\n")
+            self.root.quit()
+            return
+        elif cmd == "ls":
+            self.write(f"ls called with args: {args}\n")
+        elif cmd == "cd":
+            self.write(f"cd called with args: {args}\n")
+            if args:
+                self.current_dir = args[0]
+        else:
+            self.write(f"Unknown command: {cmd}\n")
+        self.prompt()
+
+def main():
+    root = tk.Tk()
+    app = ShellApp(root)
+    root.mainloop()
+
+if __name__ == "__main__":
+    main()
