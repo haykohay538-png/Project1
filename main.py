@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import os
 import shlex
 import tkinter as tk
@@ -38,12 +39,8 @@ class VFS:
         return None
 
     def mkdir(self, path):
-        if path.startswith('/'):
-            parts = [p for p in path.split('/') if p]
-            node = self.fs['/']
-        else:
-            parts = [p for p in path.split('/') if p]
-            node = self._resolve(self.current_path)
+        parts = [p for p in path.split('/') if p]
+        node = self._resolve(self.current_path if not path.startswith('/') else '/')
         if node is None:
             return f"Cannot create directory: {path}"
         for p in parts:
@@ -53,16 +50,14 @@ class VFS:
         return None
 
     def touch(self, path):
-        if path.startswith('/'):
-            parts = [p for p in path.split('/') if p]
-            node = self.fs['/']
-        else:
-            parts = [p for p in path.split('/') if p]
-            node = self._resolve(self.current_path)
+        parts = [p for p in path.split('/') if p]
+        node = self._resolve(self.current_path if not path.startswith('/') else '/')
         if node is None:
             return f"Cannot create file: {path}"
         for p in parts[:-1]:
-            node = node.get(p, {})
+            if p not in node or not isinstance(node[p], dict):
+                node[p] = {}
+            node = node[p]
         node[parts[-1]] = ""
         return None
 
@@ -77,19 +72,8 @@ class ShellApp:
     def __init__(self, root):
         self.root = root
         root.title(f"{VFS_NAME} - Shell")
-        self.current_dir = "/"
+        self.vfs = VFS()
         self.build_ui()
-
-    def __init__(self):
-        self.staged_files = []
-        self.commits = []
-
-    def add(self, filename):
-        if os.path.exists(filename):
-            self.staged_files.append(filename)
-            print(f"Файл {filename} добавлен в stage.")
-        else:
-            print("Ошибка: файл не найден.")
 
     def build_ui(self):
         self.output = scrolledtext.ScrolledText(self.root, wrap=tk.WORD, height=20, width=80)
@@ -103,12 +87,11 @@ class ShellApp:
 
     def print_intro(self):
         self.write("Welcome to the VFS Shell prototype.\n")
-        self.write("Supported commands: ls, cd, exit\n")
-        self.write("Environment variables expand, e.g. $HOME -> " + os.path.expandvars("$HOME") + "\n")
+        self.write("Supported commands: ls, cd, mkdir, touch, cat, exit\n")
         self.prompt()
 
     def prompt(self):
-        self.write(f"{self.current_dir}$ ")
+        self.write(f"{self.vfs.current_path}$ ")
 
     def write(self, text):
         self.output.insert(tk.END, text)
@@ -118,6 +101,7 @@ class ShellApp:
         raw = self.input_var.get()
         self.input_var.set("")
         self.write(raw + "\n")
+
         try:
             expanded = os.path.expandvars(raw)
             parts = shlex.split(expanded) if expanded.strip() else []
@@ -125,22 +109,44 @@ class ShellApp:
             self.write(f"Parse error: {e}\n")
             self.prompt()
             return
+
         if not parts:
             self.prompt()
             return
+
         cmd, *args = parts
+
         if cmd == "exit":
             self.write("Exiting...\n")
             self.root.quit()
             return
+
         elif cmd == "ls":
-            self.write(f"ls called with args: {args}\n")
+            result = self.vfs.ls(args[0] if args else None)
+            self.write(result + "\n")
+
         elif cmd == "cd":
-            self.write(f"cd called with args: {args}\n")
-            if args:
-                self.current_dir = args[0]
+            result = self.vfs.cd(args[0]) if args else "Usage: cd <path>"
+            if result:
+                self.write(result + "\n")
+
+        elif cmd == "mkdir":
+            result = self.vfs.mkdir(args[0]) if args else "Usage: mkdir <dir>"
+            if result:
+                self.write(result + "\n")
+
+        elif cmd == "touch":
+            result = self.vfs.touch(args[0]) if args else "Usage: touch <file>"
+            if result:
+                self.write(result + "\n")
+
+        elif cmd == "cat":
+            result = self.vfs.cat(args[0]) if args else "Usage: cat <file>"
+            self.write(result + "\n")
+
         else:
             self.write(f"Unknown command: {cmd}\n")
+
         self.prompt()
 
 def main():
